@@ -1,3 +1,11 @@
+# This workflow will build a Java project with Maven, and cache/restore any dependencies to improve the workflow execution time
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-java-with-maven
+
+# This workflow uses actions that are not certified by GitHub.
+# They are provided by a third-party and are governed by
+# separate terms of service, privacy policy, and support
+# documentation.
+
 name: Java CI with Maven
 
 on:
@@ -25,46 +33,44 @@ jobs:
           host port: 3306
           container port: 3306
           mysql database: 'world' 
-          mysql user: 'test'
+          mysql user: 'test' # root 계정으로 진행하면 안 된다.
           mysql password: '1234'
     - name: Build with Maven
       env:
           SPRING_DATASOURCE_URL: jdbc:mysql://localhost:3306/world
           SPRING_DATASOURCE_USERNAME: 'test'
           SPRING_DATASOURCE_PASSWORD: '1234'
-      run: mvn -B package --file pom.xml && cp target/*.war .
+      run: mvn -B package --file pom.xml && cp target/*.war doc-app3
+      #run: mvn -Dmaven.test.skip=true -B package --file pom.xml && cp doc-app3/target/*.war doc-app3
 
-    - name: Create doc-app3 directory
-      run: |
-        mkdir -p doc-app3
-        mv *.war doc-app3/ # WAR 파일을 doc-app3 디렉토리로 이동합니다.
-        mv Dockerfile doc-app3/ # Dockerfile이 있다면 이동합니다.
-        mv docker-compose.yml doc-app3/ # docker-compose.yml이 있다면 이동합니다.
+     # Docker 이미지 빌드
+    - name: docker image build
+      run: cd doc-app3 && docker build -t friend5hip/doc-app3:v1 .
 
-    - name: Build Docker image
-      run: |
-        cd doc-app3 && docker build -t friend5hip/doc-app3:v1 .
-
-    - name: Docker login
+    # DockerHub 로그인
+    - name: docker login
       uses: docker/login-action@v1
       with:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
-    - name: Docker Hub push
+    #Docker Hub 이미지 푸시
+    - name: docker Hub push
       run: docker push friend5hip/doc-app3:v1
 
+    # aws에 접속하여 도커허브에서 이미지 다운받아 실행
     - name: Deploy
       uses: appleboy/ssh-action@master
       with:
-        host: 43.200.170.100
-        port: 22
-        username: ubuntu
-        key: ${{ secrets.PRIVATE_KEY }}
+        host: 43.200.170.100      #aws ip
+        port: 22		#ssh 포트
+        username: ubuntu	#ec2 사용자. aws에서 whoami 명령 실행으로 확인. 명령라인 맨 앞에서 써있음
+        key: ${{ secrets.PRIVATE_KEY }} # pem 키. ec2 생성시 public 키 생성하여 다운로드 받은 ~.pem 파일을 메모장으로 열어 그 안의 모든 내용 복사해서 변수 값으로 등록
+        # 도커 작업
         script: |
-          sudo docker container stop doc-app3
-          sudo docker container rm doc-app3
-          sudo docker rmi friend5hip/doc-app3:v1
-          sudo docker pull friend5hip/doc-app3:v1
+          sudo docker container stop doc-app3 #컨테이너 종료
+          sudo docker container rm doc-app3  #컨테이너 삭제
+          sudo docker rmi friend5hip/doc-app3:v1  #이미지 삭제
+          sudo docker pull friend5hip/doc-app3:v1 # 이미지 다운로드
           cd doc-app3
-          sudo docker-compose up -d
+          sudo docker-compose up
