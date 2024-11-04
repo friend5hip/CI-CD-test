@@ -1,4 +1,4 @@
-version: '3'
+version: "3"
 
 services:
   database:
@@ -7,9 +7,9 @@ services:
     restart: always
     environment:
       MYSQL_DATABASE: world
-      MYSQL_ROOT_HOST: '%'
+      MYSQL_ROOT_HOST: "%"
       MYSQL_ROOT_PASSWORD: 1234
-      TZ: 'Asia/Seoul'
+      TZ: "Asia/Seoul"
     ports:
       - "3306:3306"
     volumes:
@@ -18,19 +18,20 @@ services:
       - "mysqld"
       - "--character-set-server=utf8mb4"
       - "--collation-server=utf8mb4_unicode_ci"
-#    healthcheck:
-#      test: ["CMD", "echo 'SELECT version();'| mysql"]
-#      timeout: 20s
-#      retries: 10
+    #    healthcheck:
+    #      test: ["CMD", "echo 'SELECT version();'| mysql"]
+    #      timeout: 20s
+    #      retries: 10
     networks:
       - test_network
 
   application:
     container_name: doc-app3
     restart: on-failure
-    build:
-      context: ./
-      dockerfile: Dockerfile
+    # build:
+    #   context: ./
+    #   dockerfile: Dockerfile
+    image: kingnuna/doc-app3:v1
     ports:
       - "8081:8081"
     volumes:
